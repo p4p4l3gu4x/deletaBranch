@@ -24,7 +24,7 @@ def filter(customList, listOfBranches):
     return listFiltered
 
 def confirmDelete(branchName):
-    question = "Confirm delete branch '"+ branchName + "[y/n]': "
+    question = "Confirm delete branch '"+ branchName + "'[y/n]: "
     user_input = input(question).lower()
     try:
         return bool(strtobool(user_input))
@@ -34,7 +34,7 @@ def confirmDelete(branchName):
 
 def delete_branch(branch):
     print ("Deleting remote branch '" + branch+ "'")
-    try
+    try:
         check_output('git branch -D '+ branch, shell=True).strip()
         print ("Remote branch '" + branch+ "' deleted.")
     except ValueError:
@@ -48,13 +48,13 @@ def deleteBranches(listOfBranches):
         if(confirmDelete(branch)):
             delete_branch(branch)
         else:
-            print("Branch '", branch, "' not deleted")
+            print("Branch '" +  branch + "' not deleted")
 
 def main(argv):
     gitRepoDirectory =  ""
     customList = []
     try:
-      opts, args = getopt.getopt(argv,"d:b:")
+      opts, args = getopt.getopt(argv, "d:b:")
     except getopt.GetoptError:
       print ('branch_delete -d <gitRepoDirectory> -b <listBranchesNotDelete>')
       sys.exit(2)
