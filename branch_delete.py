@@ -34,7 +34,14 @@ def confirmDelete(branchName):
 
 def delete_branch(branch):
     print ("Deleting remote branch '" + branch+ "'")
-    return check_output('git branch -D '+ branch, shell=True).strip()
+    try
+        check_output('git branch -D '+ branch, shell=True).strip()
+        print ("Remote branch '" + branch+ "' deleted.")
+    except ValueError:
+        print ("Error to delete remote branch '" + branch+ "'.")
+        return false;
+    
+    
 
 def deleteBranches(listOfBranches):
     for branch in listOfBranches:
