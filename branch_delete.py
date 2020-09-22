@@ -6,7 +6,8 @@ from distutils.util import strtobool
 from six.moves import input
 
 def listBranches(directory):
-    raw_results = check_output('cd '+directory+'; git branch -r', shell=True).decode('utf-8')
+    raw_results = check_output('cd '+directory+'; git fetch --all -p', shell=True).decode('utf-8')
+    raw_results = check_output('cd '+directory+'; git branch -r --merged', shell=True).decode('utf-8')
     listOfBranches = []
     for b in raw_results.split('\n'):
         if(b != ""):
@@ -35,14 +36,13 @@ def confirmDelete(branchName):
 def delete_branch(branch):
     print ("Deleting remote branch '" + branch+ "'")
     try:
-        check_output('git branch -D '+ branch, shell=True).strip()
+        response = check_output('git push origin --delete '+ branch, shell=True).strip()
         print ("Remote branch '" + branch+ "' deleted.")
+        return response
     except ValueError:
         print ("Error to delete remote branch '" + branch+ "'.")
         return false;
     
-    
-
 def deleteBranches(listOfBranches):
     for branch in listOfBranches:
         if(confirmDelete(branch)):
