@@ -1,9 +1,11 @@
 #!/usr/bin/python3
 
 from subprocess import check_output
-import sys, getopt
 from distutils.util import strtobool
 from six.moves import input
+import sys, getopt
+import re
+
 
 def listBranches(directory):
     raw_results = check_output('cd '+directory+'; git fetch --all -p', shell=True).decode('utf-8')
@@ -15,7 +17,7 @@ def listBranches(directory):
             listOfBranches.append(branch_name)
     return listOfBranches
 
-def filter(customList, listOfBranches):
+def filterBranches(customList, listOfBranches):
     listNonUsables = ['master']
     listNonUsables = listNonUsables + customList
     listFiltered = []
@@ -24,16 +26,16 @@ def filter(customList, listOfBranches):
             listFiltered.append(b)
     return listFiltered
 
-def confirmDelete(branchName):
-    question = "Confirm delete branch '"+ branchName + "'[y/n]: "
+def confirmDelete(itemName, type):
+    question = "Confirm delete " + type + " '"+ itemName + "'[y/n]: "
     user_input = input(question).lower()
     try:
         return bool(strtobool(user_input))
     except ValueError:
         print("Please use y/n.")
-        confirmDelete(branchName)
+        confirmDelete(itemName, type)
 
-def delete_branch(branch):
+def deleteBranch(branch):
     print ("Deleting remote branch '" + branch+ "'")
     try:
         response = check_output('git push origin --delete '+ branch, shell=True).strip()
@@ -41,22 +43,65 @@ def delete_branch(branch):
         return response
     except ValueError:
         print ("Error to delete remote branch '" + branch+ "'.")
-        return false;
+        return False;
     
 def deleteBranches(listOfBranches):
     for branch in listOfBranches:
-        if(confirmDelete(branch)):
-            delete_branch(branch)
+        if(confirmDelete(branch, "branch")):
+            deleteBranch(branch)
         else:
-            print("Branch '" +  branch + "' not deleted")
+            print("Branch '" +  branch + "' not deleted.")
+
+def listTags(directory):
+    print('List of tags')
+    raw_results = check_output('cd '+directory+'; git fetch --tags -p', shell=True).decode('utf-8')
+    raw_results = check_output('cd '+directory+'; git ls-remote --tags origin', shell=True).decode('utf-8')
+    listOfTags = []
+    for l in raw_results.split("\n"):
+        if(l != ""):
+            t = l.split("/")
+            listOfTags.append(t[2])
+    return listOfTags
+
+def filterTags(filter, listOfTags):
+    print('Filter Tags - ' + filter )
+    p = re.compile('^' + filter + '$')
+    listOfTagsFiltered = []
+    if(filter == ""):
+        listOfTagsFiltered = listOfTags
+    else:
+        for tag in listOfTags:
+            if p.match(tag):
+                listOfTagsFiltered.append(tag)
+                
+    return listOfTagsFiltered
+
+def deleteTag(tagName):
+    print ("Deleting remote tag '" + tagName+ "'")
+    try:
+        response = check_output('git push origin --delete '+ tagName, shell=True).strip()
+        print ("Remote tag '" + tagName+ "' deleted.")
+        return response
+    except ValueError:
+        print ("Error to delete remote tag '" + tagName+ "'.")
+        return False;
+
+def deleteTags(listOfTags):
+    for tag in listOfTags:
+        if(confirmDelete(tag, "tag")):
+            deleteTag(tag)
+        else:
+            print("Tag '" +  tag + "' not deleted.")
 
 def main(argv):
     gitRepoDirectory =  ""
     customList = []
+    tags = False
+    tagFilter = ""
     try:
-      opts, args = getopt.getopt(argv, "d:b:")
+      opts, args = getopt.getopt(argv, "d:b:", ["tags="])
     except getopt.GetoptError:
-      print ('branch_delete -d <gitRepoDirectory> -b <listBranchesNotDelete>')
+      print ('branch_delete -d <gitRepoDirectory> -b <listBranchesNotDelete> --tags=<regexFilter>')
       sys.exit(2)
     for opt, arg in opts:
         if opt in ("-d"):
@@ -64,16 +109,24 @@ def main(argv):
         if opt in ("-b"):
             for item in arg.split(','):
                 customList.append(item.strip())
-            
+        if opt in ("--tags"):
+            tags = True
+            if(arg != ""):
+                tagFilter = arg
     if(gitRepoDirectory == ""):
-        print ('branch_delete -d <gitRepoDirectory> -b <listBranchesNotDelete>')
+        print ('branch_delete -d <gitRepoDirectory> -b <listBranchesNotDelete> --tags=<regexFilter>')
         sys.exit(2)
-
     listOfBranches = listBranches(gitRepoDirectory)
-    listOfBranches = filter(customList, listOfBranches)
+    listOfBranches = filterBranches(customList, listOfBranches)
     listOfBranches.sort()
     print("Found '", len(listOfBranches), "' branches to delete")
     deleteBranches(listOfBranches)
+    if tags:
+        listOfTags = listTags(gitRepoDirectory)
+        listOfTags = filterTags(tagFilter, listOfTags)
+        listOfTags.sort()
+        print("Found '", len(listOfTags), "' Tags to delete.")
+        deleteTags(listOfTags)
 
 if __name__ == '__main__':
     main(sys.argv[1:]);
